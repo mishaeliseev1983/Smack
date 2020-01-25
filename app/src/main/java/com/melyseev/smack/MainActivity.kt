@@ -1,5 +1,6 @@
 package com.melyseev.smack
 
+import android.content.Intent
 import android.os.Bundle
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.snackbar.Snackbar
@@ -49,7 +50,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun loginBtnNavClicked(view:View){
-
+        val loginIntent= Intent(this, LoginActivity::class.java)
+        startActivity( loginIntent )
     }
 
     fun addChannelClicked(view: View){
