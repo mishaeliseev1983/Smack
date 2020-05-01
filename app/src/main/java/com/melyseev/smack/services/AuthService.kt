@@ -1,14 +1,14 @@
 package com.melyseev.smack.services
 
 import android.content.Context
+import android.content.Intent
 import android.util.Log
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.android.volley.Response
 import com.android.volley.toolbox.JsonObjectRequest
 import com.android.volley.toolbox.StringRequest
 import com.android.volley.toolbox.Volley
-import com.melyseev.smack.utilities.URL_CREATE_USER
-import com.melyseev.smack.utilities.URL_LOGIN
-import com.melyseev.smack.utilities.URL_REGISTER
+import com.melyseev.smack.utilities.*
 import org.json.JSONException
 import org.json.JSONObject
 
@@ -16,7 +16,7 @@ import org.json.JSONObject
 
 object AuthService {
 
-    public var currentUser = ""
+    var currentUserEmail = ""
     var currentToken=""
     var isLoggedIn= false
 
@@ -106,7 +106,7 @@ object AuthService {
             Response.Listener{
 
             try{
-                currentUser = it.getString("user")
+                currentUserEmail = it.getString("user")
                 currentToken = it.getString("token")
                 isLoggedIn = true
             }catch (ex: JSONException){
@@ -115,11 +115,11 @@ object AuthService {
             }
 
 
-            println("AuthService.loginUser success response params: user = $currentUser, token = $currentToken" )
+            println("AuthService.loginUser success response params: user's email = $currentUserEmail, token = $currentToken" )
             complete(true)
             },Response.ErrorListener {
                 jsonErrorResponse->
-                    Log.d("ERROR", "Could not register user: $jsonErrorResponse")
+                    Log.d("ERROR", "Could not login user: $jsonErrorResponse")
                 complete(false)
             })
             {
@@ -189,5 +189,68 @@ object AuthService {
         }
 
         Volley.newRequestQueue(context).add(createUserRequest)
+    }
+
+    fun findUserByEmail(context: Context, complete: (Boolean) -> Unit){
+
+        val findUser= object : JsonObjectRequest(Method.GET, "$URL_GET_USER$currentUserEmail",
+            null,
+            Response.Listener{ response->
+                try{
+                    UserDataSevice.avatarColor= response.getString("avatarColor")
+                    UserDataSevice.avatarName = response.getString("avatarName")
+                    UserDataSevice.email= response.getString("email")
+                    UserDataSevice.name= response.getString("name")
+                    UserDataSevice._id= response.getString("_id")
+
+                    val userDataChange= Intent(BROADCAST_USER_DATA_CHANGE)
+                    LocalBroadcastManager.getInstance(context).sendBroadcast(userDataChange)
+                    complete(true)
+
+                }catch (ex: JSONException){
+                    Log.d("JSON", "EXC: "+ ex.localizedMessage)
+                    complete(false)
+                }
+
+            },
+            Response.ErrorListener{error -> Log.d("ERROR", "Could not find user")}
+            ){
+            override fun getBodyContentType(): String {
+                return "application/json; charset=utf-8"
+            }
+
+            override fun getHeaders(): MutableMap<String, String> {
+                var returnMap = HashMap<String, String>()
+                returnMap.put("Authorization", "Bearer ${AuthService.currentToken}")
+                return returnMap
+            }
+        }
+        Volley.newRequestQueue(context).add(findUser)
+
+        /*val findUserRequest = object :JsonObjectRequest(
+            Method.GET,
+            "$URL_GET_USER$currentUserEmail",
+            null,
+            Response.Listener { response ->   },
+            Response.ErrorListener { error ->  Log.d("ERROR", "Could not find user")},
+
+            override fun getBodyContentType(): String {
+                return "application/json; charset=utf-8"
+            }
+                    
+            override fun getHeaders(): MutableMap<String, String> {
+                var returnMap = HashMap<String, String>()
+                returnMap.put("Authorization", "Bearer ${AuthService.currentToken}")
+                return returnMap
+            }
+        )
+
+         */
+
+    }
+
+
+    fun logout(){
+
     }
 }
